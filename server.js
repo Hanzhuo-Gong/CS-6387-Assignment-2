@@ -64,9 +64,23 @@ app.post('/register', (req, res) => {
     });
 });
 
+/*
+// Read SSL certificate and key files
+const sslOptions = {
+    key: fs.readFileSync('key.pem'),
+    cert: fs.readFileSync('cert.pem')
+};
+
+// Create HTTPS server
+https.createServer(sslOptions, app).listen(port, () => {
+    console.log(`Server running at https://localhost:${port}/`);
+});
+*/
+
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}/`);
 });
+
 
 // Close the database connection when the application is terminated
 process.on('SIGINT', () => {

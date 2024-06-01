@@ -30,7 +30,7 @@ function handleLogin() {
 
     console.log("Login clicked")
 
-    fetch('http://localhost:3000/login', {
+    fetch('https://localhost:3000/login', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -63,7 +63,7 @@ function handleRegister() {
 
     console.log("Register clicked");
 
-    fetch('http://localhost:3000/register', {
+    fetch('https://localhost:3000/register', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

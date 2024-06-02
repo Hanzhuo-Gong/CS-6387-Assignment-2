@@ -1,9 +1,14 @@
+// OWASP TOP 10 A08:2021 – Software and Data Integrity Failures:
+// Ensure libraries and dependencies, such as npm or Maven, are consuming trusted repositories to prevent the problem.
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const bodyParser = require('body-parser');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
+
+// OWASP TOP 10 A04:2021 – Insecure Design: To prevent the Insecure Design: 
+// Establish and use a library of secure design patterns or paved road ready to use components from nodejs libraries
 const bcrypt = require('bcrypt');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
@@ -63,21 +68,25 @@ app.post('/login', (req, res) => {
         return res.status(400).json({ message: 'Username and password are required' });
     }
 
-    // OWASP TOP 10 A03:2021 – Injection: I sannitizaed the data before processing, and use ? instead of ${username} to prevent injections
-
     // Sanitize input, to ensure all user inputs are properly sanitized and validated before processing or storing them in the database.
     // This is using regex to make sure the username only contains lowercase letter, uppercase letter and digits.
     // Sanitizing the username ensures that it contains only valid characters and helps to prevent injection attacks.
     // The ^ inside the square brackets [] means "not".
     // a-zA-Z0-9 includes all lowercase letters (a-z), uppercase letters (A-Z), and digits (0-9).
     // g (global flag): This means the pattern should be applied globally across the entire string, not just the first occurrence.
+
+    // OWASP TOP 10 A10:2021 – Server-Side Request Forgery (SSRF): Sanitize and validate all client-supplied input data in application layer to avoid the problem.
+    // OWASP API Security Top 10API7:2023 Server Side Request Forgery: same problem can be resolve above
     const sanitizedUsername = username.replace(/[^a-zA-Z0-9]/g, '');
 
     /*-----------------------Need to comment the below code if doing Injection attack ----------------------------------------------- */
     // The ? in the query is a placeholder for the sanitizedUsername. 
     // Using parameterized queries helps prevent SQL injection attacks by ensuring that the input is treated as a parameter rather than executable code.
+    // OWASP TOP 10 A03:2021 – Injection: use ? instead of ${username} to prevent injections
     db.get('SELECT * FROM users WHERE username = ?', [sanitizedUsername], (err, row) => {
 
+        // OWASP TOP 10 A03:2021 A09:2021 – Security Logging and Monitoring Failures: Display log for both success and failture of the request for
+        // better montoring
         // Handling Errors: if server side encountered error, sent the error to user
         if (err) {
             return res.status(500).json({ error: err.message });
@@ -174,13 +183,17 @@ app.post('/register', (req, res) => {
     // The ^ inside the square brackets [] means "not".
     // a-zA-Z0-9 includes all lowercase letters (a-z), uppercase letters (A-Z), and digits (0-9).
     // g (global flag): This means the pattern should be applied globally across the entire string, not just the first occurrence.
+    // OWASP TOP 10 A10:2021 – Server-Side Request Forgery (SSRF): Sanitize and validate all client-supplied input data in application layer to avoid the problem.
+    // OWASP API Security Top 10API7:2023 Server Side Request Forgery: same problem can be resolve above
     const sanitizedUsername = username.replace(/[^a-zA-Z0-9]/g, '');
 
 
     // The ? in the query is a placeholder for the sanitizedUsername. 
     // Using parameterized queries helps prevent SQL injection attacks by ensuring that the input is treated as a parameter rather than executable code. 
+    // OWASP TOP 10 A03:2021 – Injection: use ? instead of ${username} to prevent injections
     db.get('SELECT * FROM users WHERE username = ?', [sanitizedUsername], (err, row) => {
-
+        // OWASP TOP 10 A03:2021 A09:2021 – Security Logging and Monitoring Failures: Display log for both success and failture of the request for
+        // better montoring
         // Handling Errors: if server side encountered error, sent the error to user
         if (err) {
             return res.status(500).json({ error: err.message });
@@ -219,6 +232,9 @@ app.post('/register', (req, res) => {
 
 });
 
+// OWASP TOP 10 A01:2021 – Broken Access Control: To resolve the accessing API with missing access controls for POST, PUT and DELETE problem
+// I limited accessing the change password POST api to those who login by checking the session, and the user only able to change his/her own password.
+// OWASP TOP 10 API1:2023 Broken Object Level Authorization: Make sure the user is logged in, and the user will have the perform the API call.
 // API endpoint to handle password change
 app.post('/change-password', authenticateSession, (req, res, next) => {
     try {
@@ -233,11 +249,14 @@ app.post('/change-password', authenticateSession, (req, res, next) => {
         // Default method: bcrypt.compare(plainTextPassword, hashedPassword, callback)
         // bcrypt hashes the plain text password using the same salt and algorithm as the stored hash, and compare the stored hash value
         bcrypt.hash(defaultPassword, 10, (err, hashedPassword) => {
+            // OWASP TOP 10 A03:2021 A09:2021 – Security Logging and Monitoring Failures: Display log for both success and failture of the request for
+            // better montoring
             // Handling Errors: Unable to hash the default password
             if (err) {
                 console.error('Error hashing default password:', err.message);
                 return next(err);
             }
+
             // Updates the password in the database for the logged-in user
             db.run('UPDATE users SET password = ? WHERE username = ?', [hashedPassword, user], (err) => {
                 if (err) {
@@ -268,6 +287,7 @@ app.post('/logout', (req, res) => {
     });
 });
 
+// API endpoint that have all the user data, for testing purpose
 app.get('/dump', (req, res) => {
     db.all('SELECT * FROM users', [], (err, rows) => {
         if (err) {
@@ -276,8 +296,11 @@ app.get('/dump', (req, res) => {
         res.json({ users: rows });
     });
 });
+
 /*
 // Below is to start the server as https
+// NOTE: The browser sends warning and saying the key and cert I created is not safe.The workaround is to ignore the warning since is it localhost.
+// I am still try to find a way to use a trust certicate for localhost so I can bypass the browser warning.
 
 // Read SSL certificate and key files
 const sslOptions = {

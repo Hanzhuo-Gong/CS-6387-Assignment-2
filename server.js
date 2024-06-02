@@ -6,14 +6,30 @@ const fs = require('fs');
 const https = require('https');
 const bcrypt = require('bcrypt');
 const session = require('express-session');
+const cookieParser = require('cookie-parser');
 
 const app = express();
 const port = 3000;
+const secretKey = 'your_secret_key';
 
 // Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Session setup
+app.use(session({
+    secret: secretKey,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false, // Set to true if using HTTPS
+        httpOnly: true,
+        maxAge: 1000 * 60 * 60 * 24, // 1 day
+        sameSite: 'lax' // Helps to prevent CSRF attacks
+    }
+}));
 
 // Database setup
 let db = new sqlite3.Database(':memory:', (err) => {
@@ -30,6 +46,12 @@ db.run('CREATE TABLE users(username TEXT, password TEXT)', (err) => {
     if (err) {
         console.error(err.message);
     }
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Server error:', err);
+    res.status(500).json({ error: 'Internal server error' });
 });
 
 // API endpoint to handle login
@@ -51,6 +73,7 @@ app.post('/login', (req, res) => {
     // g (global flag): This means the pattern should be applied globally across the entire string, not just the first occurrence.
     const sanitizedUsername = username.replace(/[^a-zA-Z0-9]/g, '');
 
+    /*-----------------------Need to comment the below code if doing Injection attack ----------------------------------------------- */
     // The ? in the query is a placeholder for the sanitizedUsername. 
     // Using parameterized queries helps prevent SQL injection attacks by ensuring that the input is treated as a parameter rather than executable code.
     db.get('SELECT * FROM users WHERE username = ?', [sanitizedUsername], (err, row) => {
@@ -67,6 +90,8 @@ app.post('/login', (req, res) => {
             bcrypt.compare(password, row.password, (err, result) => {
                 // Log in successfully, return the message
                 if (result) {
+                    // store the current username into the session
+                    req.session.user = sanitizedUsername;
                     res.json({ message: 'Login successful' });
                 }
                 // Handling Errors: Invalid credentials. The result will return either true or false.
@@ -82,9 +107,7 @@ app.post('/login', (req, res) => {
         }
     });
 
-
     /*--------------------------------------BELOW ARE FOR INJECTION ATTACKS----------------------------------------------- */
-
     /*
     // Vulnerable query (for testing SQL injection) 
     // Below Code will make the injection attack successful, just for testing purpose.
@@ -113,6 +136,8 @@ app.post('/login', (req, res) => {
         console.log(`Query result: ${JSON.stringify(row)}`);
         // Log in successfully, return the message
         if (row) {
+            // store the current username into the session
+            req.session.user = username
             res.json({ message: 'Login successful' });
         }
         // Handling Errors: Invalid credentials. The result will return either true or false.
@@ -124,6 +149,15 @@ app.post('/login', (req, res) => {
 
 
 });
+
+// The authenticateSession middleware verifies if a user is logged in before allowing access to protected routes.
+function authenticateSession(req, res, next) {
+    if (req.session.user) {
+        next();
+    } else {
+        res.status(401).json({ message: 'Unauthorized' });
+    }
+}
 
 // API endpoint to handle registration
 app.post('/register', (req, res) => {
@@ -160,7 +194,7 @@ app.post('/register', (req, res) => {
         // When a user attempts to log in, their entered password is hashed and compared to the stored hashed password.
         else {
             // OWASP TOP 10 A02:2021 – Cryptographic Failures: Encrypt the sensitive data, password and store it into the database.
-            // Hash the password. the password is hashed using bcrypt.
+            // Hash the default password. the password is hashed using bcrypt.
             // This function hashes the password with a salt factor of 10. The salt factor determines the computational cost of hashing; 
             // Higher values increase security but require more processing time.
             bcrypt.hash(password, 10, (err, hashedPassword) => {
@@ -186,61 +220,52 @@ app.post('/register', (req, res) => {
 });
 
 // API endpoint to handle password change
-app.post('/change-password', (req, res, next) => {
+app.post('/change-password', authenticateSession, (req, res, next) => {
     try {
-        const { username, password } = req.body;
+        // Extracts the logged-in user from the session
+        const { user } = req.session;
 
-        if (!username || !password) {
-            return res.status(400).json({ message: 'Username and password are required' });
-        }
+        // The change password button will set the default password to 'password'
+        const defaultPassword = 'password';
 
-        const sanitizedUsername = username.replace(/[^a-zA-Z0-9]/g, '');
-
-        db.get('SELECT * FROM users WHERE username = ?', [sanitizedUsername], (err, row) => {
+        // OWASP TOP 10 A02:2021 – Cryptographic Failures: Encrypt the password, Will use the hash value to compare the hash value in the database
+        // Compare the hashed password with the stored hashed password
+        // Default method: bcrypt.compare(plainTextPassword, hashedPassword, callback)
+        // bcrypt hashes the plain text password using the same salt and algorithm as the stored hash, and compare the stored hash value
+        bcrypt.hash(defaultPassword, 10, (err, hashedPassword) => {
+            // Handling Errors: Unable to hash the default password
             if (err) {
-                console.error('Error checking username:', err.message);
+                console.error('Error hashing default password:', err.message);
                 return next(err);
             }
-            if (!row) {
-                return res.status(401).json({ message: 'Invalid credentials' });
-            }
-
-            bcrypt.compare(password, row.password, (err, result) => {
+            // Updates the password in the database for the logged-in user
+            db.run('UPDATE users SET password = ? WHERE username = ?', [hashedPassword, user], (err) => {
                 if (err) {
-                    console.error('Error comparing passwords:', err.message);
+                    // Handling Errors: Unable to update the password, return the error message
+                    console.error('Error updating password:', err.message);
                     return next(err);
                 }
-
-                if (sanitizedUsername !== 'admin') {
-                    return res.status(403).json({ message: 'Access denied' });
-                }
-
-                if (!result) {
-                    return res.status(401).json({ message: 'Invalid credentials' });
-                }
-
-
-
-                const defaultPassword = 'password';
-                bcrypt.hash(defaultPassword, 10, (err, hashedPassword) => {
-                    if (err) {
-                        console.error('Error hashing default password:', err.message);
-                        return next(err);
-                    }
-                    db.run('UPDATE users SET password = ? WHERE username = ?', [hashedPassword, 'user_to_update'], (err) => {
-                        if (err) {
-                            console.error('Error updating password:', err.message);
-                            return next(err);
-                        }
-                        res.json({ message: 'Password changed successfully' });
-                    });
-                });
+                // Update successfully, send the message back to user
+                res.json({ message: 'Password changed successfully' });
             });
         });
     } catch (error) {
+        // Handling Errors: handle any expected errors, return the errors to middleware
         console.error('Error processing password change:', error);
         next(error);
     }
+});
+
+
+// API endpoint to handle logout
+app.post('/logout', (req, res) => {
+    // Destory the session information when logout
+    req.session.destroy(err => {
+        if (err) {
+            return res.status(500).json({ message: 'Failed to log out' });
+        }
+        res.json({ message: 'Logout successful' });
+    });
 });
 
 app.get('/dump', (req, res) => {

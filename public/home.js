@@ -1,4 +1,5 @@
 const loginButton = document.getElementById("login-btn");
+const logoutButton = document.getElementById("logout-btn")
 const registerButton = document.getElementById("register-btn");
 const registerMessage = document.getElementById("register-message");
 const loginMessage = document.getElementById("login-message");
@@ -13,6 +14,7 @@ const blindInjectionButton = document.getElementById("blind-injection-btn")
 const changePasswordButton = document.getElementById("change-password")
 
 loginButton.addEventListener("click", handleLogin);
+logoutButton.addEventListener("click", handleLogout);
 registerButton.addEventListener("click", handleRegister);
 bypassInjectionButton.addEventListener("click", handleBypassInjection);
 blindInjectionButton.addEventListener("click", handleBlindInjection);
@@ -52,11 +54,11 @@ function handleLogin() {
         })
         .then(data => {
             document.getElementById("login-message").textContent = data.message;
-            loginMessage.style.visibility = "visible";
+            document.getElementById("login-message").style.visibility = "visible";
         })
         .catch(error => {
             document.getElementById("login-message").textContent = error.message;
-            loginMessage.style.visibility = "visible";
+            document.getElementById("login-message").style.visibility = "visible";
             console.error('Error:', error);
         });
 }
@@ -82,12 +84,13 @@ function handleRegister() {
         })
         .then(data => {
             document.getElementById("register-message").textContent = data.message;
+            document.getElementById("register-message").style.visibility = "visible";
             registerMessage.style.visibility = "visible";
             //console.log("Register successfully");
         })
         .catch(error => {
             document.getElementById("register-message").textContent = error.message;
-            registerMessage.style.visibility = "visible";
+            document.getElementById("register-message").style.visibility = "visible";
             console.error('Error:', error);
         });
 }
@@ -165,5 +168,27 @@ function handlePasswordChange() {
             console.error('Error:', error);
             document.getElementById("testing-message").textContent = error.message;
             document.getElementById("testing-message").style.visibility = "visible";
+        });
+}
+
+function handleLogout() {
+    fetch('http://localhost:3000/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+        .then(response => response.json().then(data => {
+            if (!response.ok) {
+                throw new Error(data.message || 'Logout failed');
+            }
+            return data;
+        }))
+        .then(data => {
+            document.getElementById("login-message").textContent = data.message;
+            document.getElementById("login-message").style.visibility = "visible";
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById("login-message").textContent = error.message;
+            document.getElementById("login-message").style.visibility = "visible";
         });
 }

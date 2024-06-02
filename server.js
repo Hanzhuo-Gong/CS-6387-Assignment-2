@@ -79,7 +79,7 @@ app.post('/login', (req, res) => {
     // OWASP API Security Top 10API7:2023 Server Side Request Forgery: same problem can be resolve above
     const sanitizedUsername = username.replace(/[^a-zA-Z0-9]/g, '');
 
-    /*-----------------------Need to comment the below code if doing Injection attack ----------------------------------------------- */
+    /*-----------------------NEED TO COMMENT THE BELOW CODE IF TESTING INJECTION ATTACK ----------------------------------------------- */
     // The ? in the query is a placeholder for the sanitizedUsername. 
     // Using parameterized queries helps prevent SQL injection attacks by ensuring that the input is treated as a parameter rather than executable code.
     // OWASP TOP 10 A03:2021 – Injection: use ? instead of ${username} to prevent injections

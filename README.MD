@@ -14,6 +14,7 @@ This project is a demonstration of SQL Injection vulnerabilities and how to miti
 3. open a browser and type the URL: http://localhost:3000/
 
 if npm install not working, please the commands below to install the packages:
+
 `npm install express sqlite3`
 
 `npm install bcrypt`
@@ -65,7 +66,9 @@ Note: For testing purpose, I create an API to check the data. By entering: `http
 ## Secure Coding Standard for JavaScript
 Reference:
 https://owasp.org/Top10/
+
 https://owasp.org/API-Security/editions/2023/en/0x11-t10/
+
 https://assurance.ncsa.gov.qa/sites/default/files/library/2018-10/MOTC-CIPD_JavaScript_Coding_Standard%28US%29.pdf
 
 

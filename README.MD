@@ -21,14 +21,14 @@ if npm install not working, please the commands below to install the packages:
 `npm install express-session cookie-parser`
 
 ## Code Explanation
-### Client-side Code 'home.js'
+### Client-side Code: home.js
 The client-side code handles user interactions and makes API calls to the server. It includes features like input validation, error handling, and timeout for API requests.
 
 - fetchWithTimeout: A utility function to perform fetch requests with a timeout.
 - Event Listeners: Attached to buttons and input fields to handle user actions.
 - API Calls: Functions like performLogin, handleRegister, handleBypassInjection, handleBlindInjection, and handlePasswordChange make API calls to the server.
 
-###Server-side Code 'server.js'
+### Server-side Code: server.js
 The server-side code uses Express.js to handle API requests and SQLite as the database.
 
 -Endpoints: /login, /register, /change-password, and /logout handle respective actions.

@@ -65,6 +65,7 @@ Note: For testing purpose, I create an API to check the data. By entering: `http
 
 ## Secure Coding Standard for JavaScript
 Reference:
+
 https://owasp.org/Top10/
 
 https://owasp.org/API-Security/editions/2023/en/0x11-t10/

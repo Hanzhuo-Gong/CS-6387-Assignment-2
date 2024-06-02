@@ -161,6 +161,27 @@ section .trees {
     transition: 0.5s;
 }
 
+#change-password {
+    position: relative;
+    border: none;
+    outline: none;
+    background: #8f2c24;
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 500;
+    transition: 0.5s;
+}
+
+#logout-btn {
+    position: relative;
+    border: none;
+    outline: none;
+    background: #8f2c24;
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 500;
+    transition: 0.5s;
+}
 
 .login .inputBox #btn:hover {
     background: #d64c42;

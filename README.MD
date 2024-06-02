@@ -4,6 +4,7 @@ openssl x509 -req -days 365 -in csr.pem -signkey key.pem -out cert.pem
 
 npm install express sqlite3
 npm install bcrypt
+npm install express-session
 
 
 node server.js

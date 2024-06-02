@@ -10,13 +10,13 @@ const loginPasswordInput = document.getElementById("login-password")
 
 const bypassInjectionButton = document.getElementById("bypassing-injection-btn");
 const blindInjectionButton = document.getElementById("blind-injection-btn")
-const errorbasedInjectionButton = document.getElementById("error-injection-btn")
+const changePasswordButton = document.getElementById("change-password")
 
 loginButton.addEventListener("click", handleLogin);
 registerButton.addEventListener("click", handleRegister);
 bypassInjectionButton.addEventListener("click", handleBypassInjection);
 blindInjectionButton.addEventListener("click", handleBlindInjection);
-errorbasedInjectionButton.addEventListener("click", handleErrorbasedInjection);
+changePasswordButton.addEventListener("click", handlePasswordChange);
 
 registerUsernameInput.addEventListener("input", hideRegisterMessage);
 registerPasswordInput.addEventListener("input", hideRegisterMessage);
@@ -32,8 +32,8 @@ function hideLoginMessage() {
 }
 
 function handleLogin() {
-    const username = document.getElementById("login-username").value;
-    const password = document.getElementById("login-password").value;
+    const username = loginUsernameInput.value;
+    const password = loginPasswordInput.value;
 
     fetch('http://localhost:3000/login', {
         method: 'POST',
@@ -62,8 +62,8 @@ function handleLogin() {
 }
 
 function handleRegister() {
-    const username = document.getElementById("register-username").value;
-    const password = document.getElementById("register-password").value;
+    const username = registerUsernameInput.value;
+    const password = registerPasswordInput.value;
 
     fetch('http://localhost:3000/register', {
         method: 'POST',
@@ -111,15 +111,6 @@ function handleBlindInjection() {
     performLogin(username, password, type);
 }
 
-// Sample Error-based Injection Attack
-function handleErrorbasedInjection() {
-    const username = "admin";
-    const password = "anything";
-    const type = "error-based";
-
-    performLogin(username, password, type);
-}
-
 // Help method to perform login
 function performLogin(username, password, type) {
     fetch('http://localhost:3000/login', {
@@ -141,6 +132,32 @@ function performLogin(username, password, type) {
         })
         .then(data => {
             console.log('Successful response:', data);
+            document.getElementById("testing-message").textContent = data.message;
+            document.getElementById("testing-message").style.visibility = "visible";
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById("testing-message").textContent = error.message;
+            document.getElementById("testing-message").style.visibility = "visible";
+        });
+}
+
+function handlePasswordChange() {
+    const username = loginUsernameInput.value; // Admin username
+    const password = loginPasswordInput.value; // Admin password
+
+    fetch('http://localhost:3000/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+    })
+        .then(response => response.json().then(data => {
+            if (!response.ok) {
+                throw new Error(data.message || 'Password change failed');
+            }
+            return data;
+        }))
+        .then(data => {
             document.getElementById("testing-message").textContent = data.message;
             document.getElementById("testing-message").style.visibility = "visible";
         })

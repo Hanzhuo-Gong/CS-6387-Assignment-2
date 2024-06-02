@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const bcrypt = require('bcrypt');
+const session = require('express-session');
 
 const app = express();
 const port = 3000;
@@ -16,8 +17,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Database setup
 let db = new sqlite3.Database(':memory:', (err) => {
+    // Handling Errors: Failed to connect to DB
     if (err) {
-        return console.error(err.message);
+        console.error('Failed to connect to the database:', err.message);
+        process.exit(1);
     }
     console.log('Connected to the in-memory SQLite database.');
 });
@@ -38,6 +41,8 @@ app.post('/login', (req, res) => {
         return res.status(400).json({ message: 'Username and password are required' });
     }
 
+    // OWASP TOP 10 A03:2021 – Injection: I sannitizaed the data before processing, and use ? instead of ${username} to prevent injections
+
     // Sanitize input, to ensure all user inputs are properly sanitized and validated before processing or storing them in the database.
     // This is using regex to make sure the username only contains lowercase letter, uppercase letter and digits.
     // Sanitizing the username ensures that it contains only valid characters and helps to prevent injection attacks.
@@ -55,6 +60,7 @@ app.post('/login', (req, res) => {
             return res.status(500).json({ error: err.message });
         }
         if (row) {
+            // OWASP TOP 10 A02:2021 – Cryptographic Failures: Encrypt the password, Will use the hash value to compare the hash value in the database
             // Compare the hashed password with the stored hashed password
             // Default method: bcrypt.compare(plainTextPassword, hashedPassword, callback)
             // bcrypt hashes the plain text password using the same salt and algorithm as the stored hash, and compare the stored hash value
@@ -153,7 +159,7 @@ app.post('/register', (req, res) => {
         // Passwords are typically hashed before storing in the database for security reasons. 
         // When a user attempts to log in, their entered password is hashed and compared to the stored hashed password.
         else {
-
+            // OWASP TOP 10 A02:2021 – Cryptographic Failures: Encrypt the sensitive data, password and store it into the database.
             // Hash the password. the password is hashed using bcrypt.
             // This function hashes the password with a salt factor of 10. The salt factor determines the computational cost of hashing; 
             // Higher values increase security but require more processing time.
@@ -179,6 +185,63 @@ app.post('/register', (req, res) => {
 
 });
 
+// API endpoint to handle password change
+app.post('/change-password', (req, res, next) => {
+    try {
+        const { username, password } = req.body;
+
+        if (!username || !password) {
+            return res.status(400).json({ message: 'Username and password are required' });
+        }
+
+        const sanitizedUsername = username.replace(/[^a-zA-Z0-9]/g, '');
+
+        db.get('SELECT * FROM users WHERE username = ?', [sanitizedUsername], (err, row) => {
+            if (err) {
+                console.error('Error checking username:', err.message);
+                return next(err);
+            }
+            if (!row) {
+                return res.status(401).json({ message: 'Invalid credentials' });
+            }
+
+            bcrypt.compare(password, row.password, (err, result) => {
+                if (err) {
+                    console.error('Error comparing passwords:', err.message);
+                    return next(err);
+                }
+
+                if (sanitizedUsername !== 'admin') {
+                    return res.status(403).json({ message: 'Access denied' });
+                }
+
+                if (!result) {
+                    return res.status(401).json({ message: 'Invalid credentials' });
+                }
+
+
+
+                const defaultPassword = 'password';
+                bcrypt.hash(defaultPassword, 10, (err, hashedPassword) => {
+                    if (err) {
+                        console.error('Error hashing default password:', err.message);
+                        return next(err);
+                    }
+                    db.run('UPDATE users SET password = ? WHERE username = ?', [hashedPassword, 'user_to_update'], (err) => {
+                        if (err) {
+                            console.error('Error updating password:', err.message);
+                            return next(err);
+                        }
+                        res.json({ message: 'Password changed successfully' });
+                    });
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Error processing password change:', error);
+        next(error);
+    }
+});
 
 app.get('/dump', (req, res) => {
     db.all('SELECT * FROM users', [], (err, rows) => {

@@ -13,7 +13,7 @@ This project is a demonstration of SQL Injection vulnerabilities and how to miti
 2. run the server by `node server.js`
 3. open a browser and type the URL: http://localhost:3000/
 
-if npm install not working, please the commands below to install the packages:
+if npm install not working, please run the commands below to install the packages:
 
 `npm install express sqlite3`
 
